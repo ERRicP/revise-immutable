@@ -1,0 +1,35 @@
+{
+  "name": "revise-immutable",
+  "version": "1.0.0",
+  "description": "Expression-based utility to change immutable objects.",
+  "main": "./dist/main.js",
+  "files": [
+    "./dist/main.js"
+  ],
+  "scripts": {
+    "test": "jest --watchAll",
+    "build": "webpack --mode production --module-bind js=babel-loader ./src/index.js --output-filename main.js --output-library revise"
+  },
+  "keywords": [
+    "immutable",
+    "revise",
+    "object",
+    "set"
+  ],
+  "author": "Eric Peterson",
+  "license": "ISC",
+  "dependencies": {
+    "babel-plugin-add-module-exports": "^1.0.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.1.2",
+    "@babel/core": "^7.1.2",
+    "@babel/preset-env": "^7.1.0",
+    "babel-core": "^7.0.0-bridge.0",
+    "babel-jest": "^23.6.0",
+    "babel-loader": "^8.0.4",
+    "jest": "^23.6.0",
+    "webpack": "^4.20.2",
+    "webpack-cli": "^3.1.2"
+  }
+}
