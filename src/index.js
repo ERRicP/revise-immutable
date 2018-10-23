@@ -1,6 +1,6 @@
 const tokenize_revise_expression = function(string) {
     // word or [square bracket set with [bracket sets] optionally inside] followed by "." or end of line
-    const rex = /^(\w+|(?:\[(?:(?:\[.*\])|[^\]])*\]))(?:\[|\.|$)/;
+    const rex = /^([\w\$]+|(?:\[(?:(?:\[.*\])|[^\]])*\]))(?:\[|\.|$)/;
     var parts = [];
     while (string.length) {        
         const match = string.match(rex); 
@@ -13,7 +13,7 @@ const tokenize_revise_expression = function(string) {
     return parts;
 }
 
-const revise = function(obj, expression, value, userFunctions) {
+const revise = function(obj, expression, value) {
     if (obj == null) throw "Argument exception: object is required";
     if (expression == null) throw "Argument exception: expression is required";
 
@@ -25,10 +25,10 @@ const revise = function(obj, expression, value, userFunctions) {
     const tokens = tokenize_revise_expression(expression);
     const stack = [objPtr];
     const arrayPropOps = {
-        ...(userFunctions||{}),
         remove: (d) => `$remove_${d}`,
         insert: (d) => `$insert_${d}`,
         append: () => `$append`,
+        find: (array, expression) => array.findIndex(expression)
     }
 
     const arrayPropOpNames = Object.getOwnPropertyNames(arrayPropOps);
@@ -36,12 +36,16 @@ const revise = function(obj, expression, value, userFunctions) {
     
     tokens.forEach((token, tokenIndex) => {
         const isArrayProp = token.startsWith("[");
-        const propNameRaw = isArrayProp ? token.substr(1, token.length - 2) : token;
+        var propNameRaw = isArrayProp ? token.substr(1, token.length - 2) : token;
         const isArray = (tokens[tokenIndex+1]||"").startsWith("[");
         
         stack.unshift((objPtr||{})[propNameRaw]);
         const stackParamNames = ([...new Array(stack.length)]).map((i, idx) => "$" + idx);
         const stackParamValues = [...stack];
+
+        // Inject array into 'find' shortcut
+        if (isArrayProp && /^find\(.*\)$/.test(propNameRaw))
+            propNameRaw = propNameRaw.replace(/^find\((.*)\)$/, "find($$1, $1)");
 
         // Evaluate stuff inside the []'s as the property name
         const evaluatedPropName = isArrayProp
@@ -94,8 +98,8 @@ const revise = function(obj, expression, value, userFunctions) {
         }
     })
 
-    return (arguments.length > 4) 
-        ? revise.apply(null, [newObj, ...[...arguments].slice(4)])
+    return (arguments.length > 3) 
+        ? revise.apply(null, [newObj, ...[...arguments].slice(3)])
         : newObj;
 }
 

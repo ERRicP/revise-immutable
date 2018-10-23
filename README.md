@@ -1,72 +1,54 @@
 # revise-immutable
-Expression-based utility to change immutable objects.
+Expression-based utility to create modified copies of immutable objects.
 
-* Modify properties
-* Build and populate objects with an expression
-* Array operations (delete/insert/append)
-* Dynamically assign values
+- Modify properties
+- Build and populate objects with an expression
+- Array operations (find/delete/insert/append)
+- Set values based on existing values
 
 # Setup
 ```
 npm install revise-immutable
 ```
 
-# tldr;
-<b>revise(\<object\>, \<expression\>, \<value|valueSetterFunction\>, [\<userFunctions\>])</b>
+# Usage
+
+```javascript
+import revise from "revise-immutable";
+
+newObject = revise(oldObject, "item.collection[$1.selectedIndex].prop", "value")
+
+// Instead of 
+newObject = {...oldObject, item: {...oldObject.item, collection: [)
+```
+revise(\<object\>, \<expression\>, \<value|valueSetterFunction\>, [expression(n), value(n)...])
 
 returns new object where the value at \<expression\> is modified to \<value\> without mutating the original object.
 
-```javascript
-// Example...
-newObject = revise(oldObject, "item.collection[$1.selectedIndex].prop", "value")
-```
-
-
-# The problem
-
-You need to make modifications to a complex immutable object.  
-
-Let's modify property **prop3** of the **second child** of the **first child** in object **"o"** below:
-
-<style>
-    PRE, E { color: #5A5;}
-    N {color: orange;}
-</style>
-
-<pre>
-    <N>o</N>----<N>child</N>----grandchild----prop 
-    |        |             `---prop2
-    |        |
-    |        `---<N>grandchild2</N>---<N>prop3 <-</N> 
-    |                       `--prop4
-    |
-    `---child2---grandchild3---prop5                         
-</pre>
-
-To efficiently make this change, we copy and modify the references in <N>orange</N> above.  The references in <E>green</E> can be re-used from the existing object.
-
-**This is how we do it now...**
-```javascript
-// The "es6" way
-const new_o = {
-    ...o, 
-    child: {
-        ...o.child, 
-        grandChild2: {
-            ...o.child.grandChild2,
-            prop3: "new value"
-        }
-    }
-}
-```
-# A Solution
-```javascript
-const newObject = revise(o, "child.grandChild2.prop3", "new value");
-```
+ - **\<object>** Object to create a revision of
+ - **\<expression>** Expression describes what to revise relative to \<object>
+    - Expressions consist of:
+        - property specifiers ex: **"item.selectedIndex"**
+        - array specifiers ex: **"items[1]"** consist of
+            - any expression that resolves to an **integer** in the array 
+            
+                example: **[1]** or **[(Math.PI * 100)>>0]**
+            - the **remove() special function**, which removes an element from the array
+            
+                example: **"items[remove(1)]"**
+            - stack variables are defined as $1 to $n (incrementing), where $1 is the array itself, and $n is the root object.
+            
+                example: **"items[$1.selectedIndex].color"**
+            - variable functions are available to **append()** and **insert()** elements into the array.
+- \<value> is the value to set at the given path
+- \<valueSetterFunction> optionally, you can provide a function to set the value.  This is useful if the value you are setting is based off of an existing value in the object structure.  Note that the stack is passed in as individual arguments to this function.  
+example: **revise(o, "users[0].likes", (likes, index, users) => likes + 1)** 
 
 # Advanced Usage
 
-Object Construction
+**Object Construction**
+
+Revise can interpret your expression and build out what isn't there.
 ```javascript
 revise ({}, "item.collection[0].description", "Yah!");
 
@@ -94,9 +76,9 @@ revise(o, "gallery.photos[append()]", newPhoto);
 // remove
 revise(o, "gallery.photos[remove($2.selectedPhotoIndex)]");
 
-// user defined function
+// find
 revise(o, 
-    "gallery.photos[findSelected($1)].description", 
+    "gallery.photos[find(p => p.fileName == $4.selectedPhoto.fileName)].description", 
     newDescription, 
     {findSelected: arr => arr.findIndex(e => e.selected) }
 );
@@ -114,4 +96,15 @@ revise(o, "users[$2.selectedUserIndex].likes", likes => likes + 1);
 
 // The full stack is available
 revise(o, "a.b.c.d", (d, c, b, a, root) => root.score + c.score)
+```
+
+**Batching**
+
+Combine multiple expressions together for one result.
+```javascript
+const newObject = revise(o, 
+    "options.preferences.theme", theme
+    "options.preferences.editor.font", font
+    "user.account.name", name
+);
 ```

@@ -83,51 +83,51 @@ describe('revise', () => {
         expect(result.a[1]).toEqual(4);
     })
 
-    it('can append an element in an array', () => {
+    it('can append an element to an array', () => {
         const orig = {a: [1, 2, 3]};
         const result = revise(orig, "a[append()]", 4);
         expect(result.a.length).toEqual(4);
         expect(result.a[3]).toEqual(4);
     })
 
-    it('can use user defined functions in an array', () => {
-        const orig = {a: [1, 2, 3]};
-        const result = revise(orig, "a[arrlen($1)]", 4, {arrlen: (arr) => arr.length});
-        expect(result.a.length).toEqual(4);
-        expect(result.a[3]).toEqual(4);
-    });
+    it('can find an array element using an expression', () => {
+        const orig = {
+            items: [
+                {name: "foo", value: 1},
+                {name: "bar", value: 2},
+                {name: "baz", value: 3}
+            ], 
+            toFind: "bar"
+        };
+
+        expect(orig.items[1].value).toEqual(2);
+
+        const result = revise(orig, "items[find(i => i.name == $2.toFind)].value", 4);
+        expect(result.items[1].value).toEqual(4);
+    })
 
     it('can build upon an array expression', () => {
         const orig = {a: [1, 2, {z: {x: 1, t: 5}, w: 6}]};
                      
-        const result = revise(orig, "a[2].z.x", 4, {arrlen: arr => arr.length - 1});
+        const result = revise(orig, "a[2].z.x", 4);
         expect(JSON.stringify(result)).toEqual('{"a":[1,2,{"z":{"x":4,"t":5},"w":6}]}');
     })
 
-    it('can be called multiple times', () => {
+    it('can be batched', () => {
         const orig = {a: {b: "c"}, d: "e"};
 
         const result = revise(orig, 
-            "a.b", "y", null,
-            "d", "z", null);
+            "a.b", "y",
+            "d", "z");
 
         expect(result.a.b).toEqual("y");
         expect(result.d).toEqual("z");
     });
 
-    // it('can specify an object prop dynamically', () => {
-    //     const orig = {
-    //         a: {
-    //             b: {c: "d", e: "f"},
-    //             g: 2,
-    //             h: 3
-    //         }
-    //     }
-
-    //     const result = revise(orig, "a[char()].c", "z", {char: () => "b"});
-        
-    //     expect(Array.isArray(result.a)).toEqual(false);
-    //     expect(result.a.b.c).toEqual("z");
-    //     //console.log(JSON.stringify(result));
-    // })
+    it('can parse funky props', () => {
+        const orig = {};
+        const result = revise(orig, "H.ell.0[/*h*/0/*w_R[]]*/].$you", "fine!");
+        expect(JSON.stringify(result)).toEqual('{"H":{"ell":{"0":[{"$you":"fine!"}]}}}');
+    })
+    // it('can specify an object prop dynamically'...not yet :(
 });
