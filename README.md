@@ -16,10 +16,7 @@ npm install revise-immutable
 ```javascript
 import revise from "revise-immutable";
 
-newObject = revise(oldObject, "item.collection[$1.selectedIndex].prop", "value")
-
-// Instead of 
-newObject = {...oldObject, item: {...oldObject.item, collection: [)
+newObject = revise(oldObject, "item.collection[$1.selectedIndex].prop", "value");
 ```
 revise(\<object\>, \<expression\>, \<value|valueSetterFunction\>, [expression(n), value(n)...])
 
@@ -108,3 +105,8 @@ const newObject = revise(o,
     "user.account.name", name
 );
 ```
+
+**Limitations**
+- Revise doesn't handle strings with unmatched square brackets in the expression.
+    - example revise(o, "items[find(i => i.name == '**]**')]) will cause an error
+- Revise only understands property names with ASCII characters A-Z, a-z, _, $, 0-9.
