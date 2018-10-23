@@ -4,7 +4,7 @@
   "description": "Expression-based utility to change immutable objects.",
   "main": "./dist/main.js",
   "files": [
-    "./dist/main.js"
+    "dist"
   ],
   "scripts": {
     "test": "jest --watchAll",
