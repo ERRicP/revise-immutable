@@ -17,7 +17,7 @@ npm install revise-immutable
 import revise from "revise-immutable";
 
 // Setter
-newObject = revise.set(oldObject, "item.collection[$1.selectedIndex].prop", "value");
+newObject = revise.set(oldObject, "item.collection[$2.selectedIndex].prop", "value");
 
 // Getter 
 value = revise.get(object, "path.to[find(i => i.selected)].color");
@@ -39,7 +39,7 @@ returns new object where the value at \<expression\> is modified to \<value\> wi
                 example: **"items[remove(1)]"**
             - stack variables are defined as $1 to $n (incrementing), where $1 is the array itself, and $n is the root object.
             
-                example: **"items[$1.selectedIndex].color"**
+                example: **"items[$2.selectedIndex].color"**
             - variable functions are available to **append()** and **insert()** elements into the array.
 - \<value> is the value to set at the given path
 - \<valueSetterFunction> optionally, you can provide a function to set the value.  This is useful if the value you are setting is based off of an existing value in the object structure.  Note that the stack is passed in as individual arguments to this function.  
