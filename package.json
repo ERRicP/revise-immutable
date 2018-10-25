@@ -18,6 +18,11 @@
   ],
   "author": "Eric Peterson",
   "license": "ISC",
+  "homepage": "https://github.com/ERRicP/revise-immutable",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ERRicP/revise-immutable.git"
+  },
   "dependencies": {},
   "devDependencies": {
     "@babel/cli": "^7.1.2",
