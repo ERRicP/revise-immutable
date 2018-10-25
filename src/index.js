@@ -13,22 +13,40 @@ const tokenize_revise_expression = function(string) {
     return parts;
 }
 
-const revise = function(obj, expression, value) {
+export const getValue = function(obj, expression) {
+   return traverseObject(false, obj, expression);
+}
+
+const setValue = function(obj, expression, value) {
+    var newObj = null;
+    
+    for (var args = [...arguments].slice(1); args.length; args = args.slice(2))
+        newObj = traverseObject.apply(null, [true, newObj||obj, ...args]);
+
+    return newObj;
+}
+
+const traverseObject = function(write, obj, expression, value) {
     if (obj == null) throw "Argument exception: object is required";
     if (expression == null) throw "Argument exception: expression is required";
 
     const newObj = {...obj};
     var objPtr = obj;
     var objPtrNull = obj;
+    var readValue = null;
     var newObjPtr = newObj;
 
     const tokens = tokenize_revise_expression(expression);
     const stack = [objPtr];
-    const arrayPropOps = {
+    const writeArrayPropOps = {
         remove: (d) => `$remove_${d}`,
         insert: (d) => `$insert_${d}`,
         append: () => `$append`,
-        find: (array, expression) => array.findIndex(expression)
+    }
+
+    const arrayPropOps = {
+        find: (array, expression) => array.findIndex(expression),
+        ...(write ? writeArrayPropOps : {})
     }
 
     const arrayPropOpNames = Object.getOwnPropertyNames(arrayPropOps);
@@ -64,7 +82,11 @@ const revise = function(obj, expression, value) {
         objPtr = (objPtr||{})[evaluatedPropName]
         objPtrNull = objPtrNull && objPtrNull[evaluatedPropName] || null;
 
-        const newVal = (tokenIndex == tokens.length - 1)
+        const end = (tokenIndex == tokens.length - 1);
+
+        if (!write && (end || objPtrNull == null)) return readValue = objPtrNull;
+
+        const newVal = end
             ? typeof value == "function"
                 ? value.apply(null, stack)
                 : value
@@ -96,11 +118,14 @@ const revise = function(obj, expression, value) {
             // Increment and assign the new object pointer
             newObjPtr = newObjPtr[evaluatedPropName] = newVal;
         }
-    })
+    });
+    
+    return write ? newObj : readValue;
+}
 
-    return (arguments.length > 3) 
-        ? revise.apply(null, [newObj, ...[...arguments].slice(3)])
-        : newObj;
+const revise = {
+    get: getValue,
+    set: setValue
 }
 
 export default revise; 

@@ -16,9 +16,13 @@ npm install revise-immutable
 ```javascript
 import revise from "revise-immutable";
 
-newObject = revise(oldObject, "item.collection[$1.selectedIndex].prop", "value");
+// Setter
+newObject = revise.set(oldObject, "item.collection[$1.selectedIndex].prop", "value");
+
+// Getter 
+value = revise.get(object, "path.to[find(i => i.selected)].color");
 ```
-revise(\<object\>, \<expression\>, \<value|valueSetterFunction\>, [expression(n), value(n)...])
+**revise.set(\<object\>, \<expression\>, \<value|valueSetterFunction\>, [expression(n), value(n)...])**
 
 returns new object where the value at \<expression\> is modified to \<value\> without mutating the original object.
 
@@ -39,7 +43,11 @@ returns new object where the value at \<expression\> is modified to \<value\> wi
             - variable functions are available to **append()** and **insert()** elements into the array.
 - \<value> is the value to set at the given path
 - \<valueSetterFunction> optionally, you can provide a function to set the value.  This is useful if the value you are setting is based off of an existing value in the object structure.  Note that the stack is passed in as individual arguments to this function.  
-example: **revise(o, "users[0].likes", (likes, index, users) => likes + 1)** 
+example: **revise.set(o, "users[0].likes", (likes, index, users) => likes + 1)** 
+
+
+**revise.get(\<object\>, \<expression\>)**
+ - expression is same as above, except that it doesn't support array modification functions insert(), remove(), append().
 
 # Advanced Usage
 
@@ -47,7 +55,7 @@ example: **revise(o, "users[0].likes", (likes, index, users) => likes + 1)**
 
 Revise can interpret your expression and build out what isn't there.
 ```javascript
-revise ({}, "item.collection[0].description", "Yah!");
+revise.set({}, "item.collection[0].description", "Yah!");
 
 // Produces this!
 {
@@ -65,16 +73,16 @@ revise ({}, "item.collection[0].description", "Yah!");
 **Arrays**
 ```javascript
 // insert
-revise(o, "gallery.photos[insert($2.selectedPhotoIndex + 1)]", newPhoto);
+revise.set(o, "gallery.photos[insert($2.selectedPhotoIndex + 1)]", newPhoto);
 
 // append
-revise(o, "gallery.photos[append()]", newPhoto);
+revise.set(o, "gallery.photos[append()]", newPhoto);
 
 // remove
-revise(o, "gallery.photos[remove($2.selectedPhotoIndex)]");
+revise.set(o, "gallery.photos[remove($2.selectedPhotoIndex)]");
 
 // find
-revise(o, 
+revise.set(o, 
     "gallery.photos[find(p => p.fileName == $4.selectedPhoto.fileName)].description", 
     newDescription, 
     {findSelected: arr => arr.findIndex(e => e.selected) }
@@ -89,17 +97,17 @@ revise(o,
 **Set Values Dynamically**
 ```javascript
 // Use the existing values to make new ones
-revise(o, "users[$2.selectedUserIndex].likes", likes => likes + 1);
+revise.set(o, "users[$2.selectedUserIndex].likes", likes => likes + 1);
 
 // The full stack is available
-revise(o, "a.b.c.d", (d, c, b, a, root) => root.score + c.score)
+revise.set(o, "a.b.c.d", (d, c, b, a, root) => root.score + c.score)
 ```
 
 **Batching**
 
 Combine multiple expressions together for one result.
 ```javascript
-const newObject = revise(o, 
+const newObject = revise.set(o, 
     "options.preferences.theme", theme
     "options.preferences.editor.font", font
     "user.account.name", name
@@ -108,5 +116,5 @@ const newObject = revise(o,
 
 **Limitations**
 - Revise doesn't handle strings with unmatched square brackets in the expression.
-    - example revise(o, "items[find(i => i.name == '**]**')]) will cause an error
+    - example revise.set(o, "items[find(i => i.name == '**]**')]) will cause an error
 - Revise only understands property names with ASCII characters A-Z, a-z, _, $, 0-9.
