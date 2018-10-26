@@ -127,7 +127,25 @@ describe('revise', () => {
     it('can parse funky props', () => {
         const orig = {};
         const result = revise.set(orig, "H.ell.0[/*h*/0/*w_R[]]*/].$you", "fine!");
-        expect(JSON.stringify(result)).toEqual('{"H":{"ell":{"0":[{"$you":"fine!"}]}}}');
+        expect(JSON.stringify(result)).toEqual('{"H":{"ell":[[{"$you":"fine!"}]]}}');
     })
-    // it('can specify an object prop dynamically'...not yet :(
+
+    it('can specify an object prop dynamically', () => {
+        const orig = {
+            a: {
+                b: "c",
+                e: "f"
+            },
+            d: "b"
+        };
+
+        const result = revise.set(orig, "a[$2.d]", "g");
+        expect(result.a.b).toEqual("g");
+    })
+
+    it('can build an object with array notation', () => {
+        const result = revise.set({d: "b"}, "a[$2.d]", "z");
+        expect(Array.isArray(result.a)).toEqual(false);
+        expect(result.a.b).toEqual("z");
+    });
 });

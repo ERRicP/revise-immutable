@@ -1,4 +1,4 @@
-const tokenize_revise_expression = function(string) {
+const tokenizeReviseExpression = function(string) {
     // word or [square bracket set with [bracket sets] optionally inside] followed by "." or end of line
     const rex = /^([\w\$]+|(?:\[(?:(?:\[.*\])|[^\]])*\]))(?:\[|\.|$)/;
     var parts = [];
@@ -13,119 +13,137 @@ const tokenize_revise_expression = function(string) {
     return parts;
 }
 
-export const getValue = function(obj, expression) {
-   return traverseObject(false, obj, expression);
+const arrayPropOps = {
+    find: (array, expression) => array.findIndex(expression),
+    remove: (d) => `$remove_${d}`,
+    insert: (d) => `$insert_${d}`,
+    append: () => `$append`,
 }
 
-const setValue = function(obj, expression, value) {
+const arrayPropOpNames = Object.getOwnPropertyNames(arrayPropOps);
+
+const arrayPropOpValues = arrayPropOpNames.map(prop => arrayPropOps[prop]);
+
+const evaluateToken = function(token, stack, readMode) {
+    const stackParamNames = ([...new Array(stack.length)]).map((i, idx) => "$" + (idx + 1));
+    const stackParamValues = [...stack];
+
+    // Inject array ref into find token
+    if (/^\[find\(.*\)\]$/.test(token))
+        token = token.replace(/^\[find\((.*)\)\]$/, "find($$1, $1)");
+
+    return Function.apply(
+        null, 
+        [
+            ...stackParamNames,
+            ...(readMode && [] || arrayPropOpNames),
+            `return ${token.replace(/^\[|\]$/g, "")}`
+        ]
+    )
+    .apply(null, [...stackParamValues, ...(readMode && [] || arrayPropOpValues)]);
+}
+
+const evaluateTokens = function (tokens, object) {
+    var obj = {...object};
+    const stack = [obj];
+
+    const evaluatedTokens = tokens.map(t => {
+        const tokenValue = t.startsWith("[") ? evaluateToken(t, stack) : t;
+
+        obj = obj == null ? null : obj[tokenValue];
+        
+        stack.unshift(obj);
+
+        return tokenValue;
+    });
+
+    return {
+        tokens: evaluatedTokens,
+        pointers: stack.reverse()
+    };    
+}
+
+const isArrayOpString = function(token) {
+    //console.log(">>" + token)
+    return /^\$(?:remove_\d+|insert_\d+|append)$/.test(token);
+}
+
+const isArray = function(prop, nextToken) {
+    if (prop != null && Array.isArray(prop)) return true;
+    if (!isNaN(parseInt(nextToken))) return true;
+    if (isArrayOpString(nextToken)) return true;
+
+    return false;
+}
+
+const applyArrayOp = function(array, token, value) {
+    if (/^\$remove_\d+$/.test(token)) {
+        array.splice(token.split("_")[1], 1)
+        return {removed: true};
+    }
+
+    if (/^\$insert_\d+$/.test(token)) {
+        token = parseInt(token.split("_")[1]);
+        array.splice(token, 0, value)
+    }
+    else if (/^\$append+$/.test(token)) {
+        token = array.length;
+        array.splice(token, 0, value);
+    }
+
+    return {newToken: token};
+}
+
+const setValues = function(obj, expression, value) {
     var newObj = null;
     
     for (var args = [...arguments].slice(1); args.length; args = args.slice(2))
-        newObj = traverseObject.apply(null, [true, newObj||obj, ...args]);
+        newObj = setValue.apply(null, [newObj||obj, ...args]);
 
     return newObj;
 }
 
-const traverseObject = function(write, obj, expression, value) {
-    if (obj == null) throw "Argument exception: object is required";
-    if (expression == null) throw "Argument exception: expression is required";
-
-    const newObj = {...obj};
-    var objPtr = obj;
-    var objPtrNull = obj;
-    var readValue = null;
+export const setValue = function(obj, expression, value) { 
+    const {tokens, pointers} = evaluateTokens(tokenizeReviseExpression(expression), obj);
+    var p = 0;
+    var newObj = {...pointers[p++]};
     var newObjPtr = newObj;
 
-    const tokens = tokenize_revise_expression(expression);
-    const stack = [objPtr];
-    const writeArrayPropOps = {
-        remove: (d) => `$remove_${d}`,
-        insert: (d) => `$insert_${d}`,
-        append: () => `$append`,
-    }
+    tokens.every((token, index) => {
+        const ptr = pointers[p++];
 
-    const arrayPropOps = {
-        find: (array, expression) => array.findIndex(expression),
-        ...(write ? writeArrayPropOps : {})
-    }
-
-    const arrayPropOpNames = Object.getOwnPropertyNames(arrayPropOps);
-    const arrayPropOpValues = arrayPropOpNames.map(prop => arrayPropOps[prop]);
-    
-    tokens.forEach((token, tokenIndex) => {
-        const isArrayProp = token.startsWith("[");
-        var propNameRaw = isArrayProp ? token.substr(1, token.length - 2) : token;
-        const isArray = (tokens[tokenIndex+1]||"").startsWith("[");
-        
-        stack.unshift((objPtr||{})[propNameRaw]);
-        const stackParamNames = ([...new Array(stack.length)]).map((i, idx) => "$" + idx);
-        const stackParamValues = [...stack];
-
-        // Inject array into 'find' shortcut
-        if (isArrayProp && /^find\(.*\)$/.test(propNameRaw))
-            propNameRaw = propNameRaw.replace(/^find\((.*)\)$/, "find($$1, $1)");
-
-        // Evaluate stuff inside the []'s as the property name
-        const evaluatedPropName = isArrayProp
-            ? Function.apply(
-                    null, 
-                    [
-                        ...stackParamNames,
-                        ...arrayPropOpNames,
-                        `return ${propNameRaw}`
-                    ]
-                )
-                .apply(null, [...stackParamValues, ...arrayPropOpValues])
-            : propNameRaw;    
-
-        // Increment the original object pointer
-        objPtr = (objPtr||{})[evaluatedPropName]
-        objPtrNull = objPtrNull && objPtrNull[evaluatedPropName] || null;
-
-        const end = (tokenIndex == tokens.length - 1);
-
-        if (!write && (end || objPtrNull == null)) return readValue = objPtrNull;
-
-        const newVal = end
+        // Clone the input object's property
+        const newValue = (index == tokens.length - 1)
             ? typeof value == "function"
-                ? value.apply(null, stack)
+                ? value.apply(null, pointers.slice(0, p).reverse())
                 : value
-            : isArray
-                ? [...(objPtr||[])] 
-                : {...(objPtr||{})}
+            : isArray(ptr, tokens[index+1]) ? [...(ptr||[])] : {...(ptr||{})};
 
-        if (isArrayProp) {
-            var arrayPropValue = evaluatedPropName;
-
-            // Apply array specific operations
-            if (/^\$remove_\d+$/.test(arrayPropValue)) {
-                newObjPtr.splice(arrayPropValue.split("_")[1], 1)
-                return newObj;
-            } 
-            else if (/^\$insert_\d+$/.test(arrayPropValue)) {
-                arrayPropValue = parseInt(arrayPropValue.split("_")[1]);
-                newObjPtr.splice(arrayPropValue, 0, newVal)
-            }
-            else if (/^\$append+$/.test(arrayPropValue)) {
-                arrayPropValue = newObjPtr.length;
-                newObjPtr.splice(arrayPropValue, 0, newVal);
-            } 
-
-            // Increment and assign the new object pointer
-            newObjPtr = newObjPtr[arrayPropValue] = newVal;
+        // Create/set the new value/apply the array operation
+        if (Array.isArray(newObjPtr) && isArrayOpString(token)) {
+            const {newToken, removed} = applyArrayOp(newObjPtr, token, newValue);
+            if (removed) return false;
+            newObjPtr = newObjPtr[newToken] = newValue;
         }
         else {
-            // Increment and assign the new object pointer
-            newObjPtr = newObjPtr[evaluatedPropName] = newVal;
+            newObjPtr = newObjPtr[token] = newValue;
         }
+
+        return true;
     });
-    
-    return write ? newObj : readValue;
-}
+
+    return newObj;
+} 
+
+export const getValue = function(obj, expression) {
+    const {tokens, pointers} = evaluateTokens(tokenizeReviseExpression(expression), obj);
+    const lastPointer = pointers.pop();
+    return typeof(lastPointer) == "undefined" ? null : lastPointer;
+} 
 
 const revise = {
     get: getValue,
-    set: setValue
+    set: setValues
 }
 
 export default revise; 

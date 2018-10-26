@@ -36,8 +36,12 @@ describe('revise.get', () => {
         expect(value).toEqual(null);
     })
 
-    it ('blows up when you use a write function', () => {
-        const t = () => revise.get({}, "a[append()]");
-        expect(t).toThrowError(/append is not defined/)
+    it ('returns null when you use an array modifier', () => {
+        const result = revise.get({}, "a[remove(1)]");
+        expect(result).toEqual(null);
+    })
+
+    it ('can handle property names in brackets', () => {
+        expect(revise.get({a:{b: 1}}, "a['b']")).toEqual(1);
     })
 });
