@@ -1,10 +1,14 @@
 # revise-immutable
 Expression-based utility to create modified copies of immutable objects.
 
+Set
 - Modify properties
 - Build and populate objects with an expression
 - Array operations (find/delete/insert/append)
 - Set values based on existing values
+
+Get
+- Get object values using the same expression language
 
 # Setup
 ```
@@ -83,7 +87,7 @@ revise.set(o, "gallery.photos[remove($2.selectedPhotoIndex)]");
 
 // find
 revise.set(o, 
-    "gallery.photos[find(p => p.fileName == $4.selectedPhoto.fileName)].description", 
+    "gallery.photos[find(p => p.selected)].description", 
     newDescription, 
     {findSelected: arr => arr.findIndex(e => e.selected) }
 );

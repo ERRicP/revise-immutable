@@ -29,9 +29,9 @@ const evaluateToken = function(token, stack, readMode) {
     const stackParamValues = [...stack];
 
     // Inject array ref into find token
-    if (/^\[find\(.*\)\]$/.test(token))
-        token = token.replace(/^\[find\((.*)\)\]$/, "find($$1, $1)");
+    token = token.replace(/^\[find\((.*)\)\]$/, "find($$1, $1)");
 
+    // Evaluate token contents
     return Function.apply(
         null, 
         [
@@ -40,7 +40,10 @@ const evaluateToken = function(token, stack, readMode) {
             `return ${token.replace(/^\[|\]$/g, "")}`
         ]
     )
-    .apply(null, [...stackParamValues, ...(readMode && [] || arrayPropOpValues)]);
+    .apply(
+        null, 
+        [...stackParamValues, ...(readMode && [] || arrayPropOpValues)]
+    );
 }
 
 const evaluateTokens = function (tokens, object) {
@@ -64,16 +67,13 @@ const evaluateTokens = function (tokens, object) {
 }
 
 const isArrayOpString = function(token) {
-    //console.log(">>" + token)
     return /^\$(?:remove_\d+|insert_\d+|append)$/.test(token);
 }
 
 const isArray = function(prop, nextToken) {
-    if (prop != null && Array.isArray(prop)) return true;
-    if (!isNaN(parseInt(nextToken))) return true;
-    if (isArrayOpString(nextToken)) return true;
-
-    return false;
+    return (prop != null && Array.isArray(prop))
+        || (!isNaN(parseInt(nextToken)))
+        || isArrayOpString(nextToken);
 }
 
 const applyArrayOp = function(array, token, value) {
@@ -83,15 +83,21 @@ const applyArrayOp = function(array, token, value) {
     }
 
     if (/^\$insert_\d+$/.test(token)) {
-        token = parseInt(token.split("_")[1]);
-        array.splice(token, 0, value)
-    }
-    else if (/^\$append+$/.test(token)) {
-        token = array.length;
-        array.splice(token, 0, value);
+        const index = parseInt(token.split("_")[1]);
+        array.splice(index, 0, value)
+        return {newToken: index};
     }
 
-    return {newToken: token};
+    if (/^\$append+$/.test(token)) {
+        const index = array.length;
+        array.splice(index, 0, value);
+        return {newToken: index};
+    }
+}
+
+export const getValue = function(obj, expression) {
+    return evaluateTokens(tokenizeReviseExpression(expression), obj)
+        .pointers.pop() || null;
 }
 
 const setValues = function(obj, expression, value) {
@@ -117,7 +123,9 @@ export const setValue = function(obj, expression, value) {
             ? typeof value == "function"
                 ? value.apply(null, pointers.slice(0, p).reverse())
                 : value
-            : isArray(ptr, tokens[index+1]) ? [...(ptr||[])] : {...(ptr||{})};
+            : isArray(ptr, tokens[index+1]) 
+                ? [...(ptr||[])] 
+                : {...(ptr||{})};
 
         // Create/set the new value/apply the array operation
         if (Array.isArray(newObjPtr) && isArrayOpString(token)) {
@@ -133,12 +141,6 @@ export const setValue = function(obj, expression, value) {
     });
 
     return newObj;
-} 
-
-export const getValue = function(obj, expression) {
-    const {tokens, pointers} = evaluateTokens(tokenizeReviseExpression(expression), obj);
-    const lastPointer = pointers.pop();
-    return typeof(lastPointer) == "undefined" ? null : lastPointer;
 } 
 
 const revise = {
