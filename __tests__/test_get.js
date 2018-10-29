@@ -40,4 +40,18 @@ describe('revise.get', () => {
         const t = () => revise.get({}, "a[append()]");
         expect(t).toThrowError(/append is not defined/)
     })
+
+    it ('finds object prop by square bracket', () => {
+        const orig = {a: {b: 1}};
+        const value = revise.get(orig, "a['b']");
+        expect(value).toEqual(1);
+
+        const value1 = revise.get(orig, 'a["b"]');
+        expect(value1).toEqual(1);
+    })
+
+    it('does what when invalid syntax', () => {
+        const t = () => revise.get({}, "a...b[");
+        expect(t).toThrowError(/invalid expression/);
+    })
 });
