@@ -24,7 +24,7 @@ import revise from "revise-immutable";
 newObject = revise.set(oldObject, "item.collection[$2.selectedIndex].prop", "value");
 
 // Getter 
-value = revise.get(object, "path.to[find(i => i.selected)].color");
+value = revise.get(object, `path.to[find(${i => i.selected})].color`);
 ```
 **revise.set(\<object\>, \<expression\>, \<value|valueSetterFunction\>, [expression(n), value(n)...])**
 
@@ -87,7 +87,7 @@ revise.set(o, "gallery.photos[remove($2.selectedPhotoIndex)]");
 
 // find
 revise.set(o, 
-    "gallery.photos[find(p => p.selected)].description", 
+    `gallery.photos[find(${p => p.selected})].description`, 
     newDescription, 
     {findSelected: arr => arr.findIndex(e => e.selected) }
 );
@@ -122,3 +122,4 @@ const newObject = revise.set(o,
 - Revise doesn't handle strings with unmatched square brackets in the expression.
     - example revise.set(o, "items[find(i => i.name == '**]**')]) will cause an error
 - Revise only understands property names with ASCII characters A-Z, a-z, _, $, 0-9.
+- The find function expects an expression.  In some older browsers, arrow functions may not be supported.  A work around is to use string substitution such as `a[find(${f => f.})]`, such that your own transpilation process will substitute the non-arrow function as appropriate.
