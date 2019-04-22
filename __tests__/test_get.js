@@ -54,6 +54,12 @@ describe('revise.get', () => {
         expect(value1).toEqual(1);
     })
 
+    it ('can use babel translated string', () => {
+        const obj = {a: [{b: 1, text: "foo"}, {b: 2, text: "bar"}]}
+        const value = revise.get(obj, `a[find(${f => f.b == 2})].text`)
+        expect(value).toEqual("bar");
+    })
+
     it('does what when invalid syntax', () => {
         const t = () => revise.get({}, "a...b[");
         expect(t).toThrowError(/invalid expression/);

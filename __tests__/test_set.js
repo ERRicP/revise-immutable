@@ -102,7 +102,7 @@ describe('revise', () => {
 
         expect(orig.items[1].value).toEqual(2);
 
-        const result = revise.set(orig, "items[find(i => i.name == $2.toFind)].value", 4);
+        const result = revise.set(orig, `items[find(${i => i.name == $2.toFind})].value`, 4);
         expect(result.items[1].value).toEqual(4);
     })
 
