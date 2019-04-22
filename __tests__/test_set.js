@@ -148,4 +148,96 @@ describe('revise', () => {
         expect(Array.isArray(result.a)).toEqual(false);
         expect(result.a.b).toEqual("z");
     });
+
+    it('can travese two arrays', () => {
+        const orig = {
+            a: [
+                {b: [{c: 1}]},
+                {b: [{c: 2}]},
+                {b: [{c: 3}]}
+            ]
+        };
+
+        const result = revise.set(orig, "a[0].b[0].c", 4);
+
+        expect(result.a[0].b[0].c).toEqual(4);
+    });
+
+    it('can traverse adjacent arrays', () => {
+        const orig = {
+            a: [
+                [0,1,2],
+                [3,4,5],
+                [6,7,8]
+            ]
+        }
+
+        const result = revise.set(orig, "a[1][2]", 9);
+        expect(result.a[1][2]).toEqual(9);
+    })
+
+    it('can do something complicated', () => {
+        const orig = {
+            allClaims: {
+                items: [
+                    {a: "foo", b: {c: "bar"}}
+                ],
+                selectedIndex: 0
+            }
+        }
+
+        const action = {
+            fields: {
+                a: "futz"
+            }
+        }
+
+        const result = revise.set(
+            orig, 
+            "allClaims.selectedIndex", 
+            (selectedIndex, allClaims) => selectedIndex != -1 ? selectedIndex : allClaims.items.length,
+            "allClaims.items[$2.selectedIndex]",
+            (obj) => ({
+                ...(obj || {a: "new", b: {c: "empty"}}), 
+                ...action.fields
+            })
+        );
+
+        expect(result.allClaims.selectedIndex).toEqual(0);
+        expect(result.allClaims.items[0].a).toEqual("futz");
+        expect(result.allClaims.items[0].b.c).toEqual("bar");
+    })
+
+    // it('can do something complicated 2', () => {
+    //     const orig = {
+    //         allClaims: {
+    //             items: [
+    //                 {a: "foo", b: {c: "bar"}},
+    //                 {a: "baz", b: {c: "biz"}}
+    //             ],
+    //             selectedIndex: -1
+    //         }
+    //     }
+
+    //     const action = {
+    //         fields: {
+    //             a: "futz"
+    //         }
+    //     }
+
+    //     const result = revise.set(
+    //         orig, 
+    //         "allClaims.selectedIndex", 
+    //         (selectedIndex, allClaims) => selectedIndex != -1 ? selectedIndex : allClaims.items.length,
+    //         "allClaims.items[$2.selectedIndex]",
+    //         (obj) => ({
+    //             ...(obj || {a: "new", b: {c: "empty"}}), 
+    //             ...action.fields
+    //         })
+    //     );
+
+    //     expect(result.allClaims.selectedIndex).toEqual(2);
+    //     expect(result.allClaims.items[2].a).toEqual("futz");
+    //     expect(result.allClaims.items[2].b.c).toEqual("empty");
+    // })
 });
