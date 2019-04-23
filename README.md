@@ -122,4 +122,4 @@ const newObject = revise.set(o,
 - Revise doesn't handle strings with unmatched square brackets in the expression.
     - example revise.set(o, "items[find(i => i.name == '**]**')]) will cause an error
 - Revise only understands property names with ASCII characters A-Z, a-z, _, $, 0-9.
-- The find function expects an expression.  In some older browsers, arrow functions may not be supported.  A work around is to use string substitution such as `a[find(${f => f.})]`, such that your own transpilation process will substitute the non-arrow function as appropriate.
+- The find function expects an expression.  In some older browsers, arrow functions may not be supported.  You may use "function()" syntax instead of the arrow function syntax to remedy this.  Another approach that works in some cases is to use string substitution such as `a[find(${f => f.})]`, such that your own transpilation process will substitute the non-arrow function as appropriate.  This, however, has the limitation in that it can't read external veriables.

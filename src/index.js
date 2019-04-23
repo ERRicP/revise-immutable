@@ -40,6 +40,7 @@ const tokenizeReviseExpression = function(string) {
 
 const arrayPropOps = {
     find: (array, expression) => array.findIndex(expression),
+    findOrAppend: (array, expression) => { const idx = array.findIndex(expression); return idx == -1 ? array.length : idx; },
     remove: (d) => `$remove_${d}`,
     insert: (d) => `$insert_${d}`,
     append: () => `$append`,
@@ -54,7 +55,7 @@ const evaluateToken = function(token, stack, readMode) {
     const stackParamValues = [...stack];
 
     // Inject array ref into find token
-    token = token.replace(/^\[find\((.*)\)\]$/, "find($$1, $1)");
+    token = token.replace(/^\[find(OrAppend)?\((.*)\)\]$/, "find$1($$1, $2)");
 
     // Evaluate token contents
     return Function.apply(

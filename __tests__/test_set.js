@@ -176,68 +176,39 @@ describe('revise', () => {
         expect(result.a[1][2]).toEqual(9);
     })
 
-    it('can do something complicated', () => {
+
+    it('can find or append', () => {
         const orig = {
-            allClaims: {
-                items: [
-                    {a: "foo", b: {c: "bar"}}
-                ],
-                selectedIndex: 0
-            }
+            items: [
+                {key: 1},
+                {key: 2}
+            ]
         }
 
-        const action = {
-            fields: {
-                a: "futz"
-            }
-        }
+        const keyToFind = 2;
+        const value = "3";
 
         const result = revise.set(
             orig, 
-            "allClaims.selectedIndex", 
-            (selectedIndex, allClaims) => selectedIndex != -1 ? selectedIndex : allClaims.items.length,
-            "allClaims.items[$2.selectedIndex]",
-            (obj) => ({
-                ...(obj || {a: "new", b: {c: "empty"}}), 
-                ...action.fields
-            })
-        );
+            `items[findOrAppend(i => i.key == ${keyToFind})]`, 
+            item => item != null 
+                ? {...item, value: value} 
+                : {key: keyToFind, value: value})
 
-        expect(result.allClaims.selectedIndex).toEqual(0);
-        expect(result.allClaims.items[0].a).toEqual("futz");
-        expect(result.allClaims.items[0].b.c).toEqual("bar");
+        expect(result.items.length).toEqual(2);
+        expect(result.items[1].value).toEqual(value);
+
+        const result2 = revise.set(
+            orig, 
+            `items[findOrAppend(i => i.key == 5)]`, 
+            item => item != null 
+                ? {...item, value: value} 
+                : {key: 5, value: value})
+
+        //console.log(JSON.stringify(result2, null, 4))
+        expect(result2.items.length).toEqual(3);
+        expect(result2.items[2].key).toEqual(5);
+        expect(result2.items[2].value).toEqual(value);
     })
 
-    // it('can do something complicated 2', () => {
-    //     const orig = {
-    //         allClaims: {
-    //             items: [
-    //                 {a: "foo", b: {c: "bar"}},
-    //                 {a: "baz", b: {c: "biz"}}
-    //             ],
-    //             selectedIndex: -1
-    //         }
-    //     }
-
-    //     const action = {
-    //         fields: {
-    //             a: "futz"
-    //         }
-    //     }
-
-    //     const result = revise.set(
-    //         orig, 
-    //         "allClaims.selectedIndex", 
-    //         (selectedIndex, allClaims) => selectedIndex != -1 ? selectedIndex : allClaims.items.length,
-    //         "allClaims.items[$2.selectedIndex]",
-    //         (obj) => ({
-    //             ...(obj || {a: "new", b: {c: "empty"}}), 
-    //             ...action.fields
-    //         })
-    //     );
-
-    //     expect(result.allClaims.selectedIndex).toEqual(2);
-    //     expect(result.allClaims.items[2].a).toEqual("futz");
-    //     expect(result.allClaims.items[2].b.c).toEqual("empty");
-    // })
 });
