@@ -77,20 +77,33 @@ revise.set({}, "item.collection[0].description", "Yah!");
 **Arrays**
 ```javascript
 // insert
+// Inserts the value into the array at the specified position
 revise.set(o, "gallery.photos[insert($2.selectedPhotoIndex + 1)]", newPhoto);
 
 // append
+// Returns the last index in the array plus 1
 revise.set(o, "gallery.photos[append()]", newPhoto);
 
 // remove
+// Removes the first element that matches the condition
 revise.set(o, "gallery.photos[remove($2.selectedPhotoIndex)]");
 
 // find
+// Finds the first element that matches the condition
 revise.set(o, 
     `gallery.photos[find(${p => p.selected})].description`, 
-    newDescription, 
-    {findSelected: arr => arr.findIndex(e => e.selected) }
+    newDescription
 );
+
+// find or append
+// Finds the first element that matches the condition
+// If no element is found, returns the last index in the array plus 1
+revise.set(o,
+    `app.checklist[findOrAppend(i => i.id == ${itemId})])`,
+    item => item != null 
+        ? {...item, value: value} 
+        : {id: itemId, value: value})
+)
 
 ```
 *NOTE* : in between [ ]'s, the following "stack variables" are available:
